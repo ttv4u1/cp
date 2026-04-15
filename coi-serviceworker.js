@@ -1,4 +1,4 @@
-/*! coi-serviceworker v0.1.7 - MIT License - https://github.com/gzuidhof/coi-serviceworker */
+/*! coi-serviceworker v0.1.7 - MIT License */
 if (typeof window === "undefined") {
     self.addEventListener("install", () => self.skipWaiting());
     self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -15,11 +15,10 @@ if (typeof window === "undefined") {
         );
     });
 } else {
-    const script = document.currentScript;
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register(window.location.pathname + "coi-serviceworker.js").then((registration) => {
-            registration.addEventListener("updatefound", () => location.reload());
-            if (registration.active && !navigator.serviceWorker.controller) location.reload();
+        navigator.serviceWorker.register(window.location.pathname + "coi-serviceworker.js").then((reg) => {
+            reg.addEventListener("updatefound", () => location.reload());
+            if (reg.active && !navigator.serviceWorker.controller) location.reload();
         });
     }
 }
