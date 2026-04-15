@@ -3,251 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pemampat Video Pro v1.2.1</title>
+    <title>Video Master Converter v1.3.0</title>
     
-    <!-- MEMUATKAN SERVICE WORKER UNTUK SHAREDARRAYBUFFER -->
+    <!-- Memulakan persekitaran SharedArrayBuffer -->
     <script src="coi-serviceworker.js"></script>
-    
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    
     <style>
-        :root { 
-            --primary: #4f46e5; 
-            --primary-hover: #4338ca; 
-            --bg: #f8fafc; 
-            --success: #10b981;
+        :root {
+            --primary: #6366f1;
+            --secondary: #10b981;
+            --dark: #1e293b;
+            --light: #f8fafc;
         }
-        
-        * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        
-        body { 
-            background-color: var(--bg); 
-            display: flex; 
-            justify-content: center; 
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px; 
-            margin: 0;
+            padding: 20px;
         }
 
-        .card { 
-            background: white; 
-            width: 100%; 
-            max-width: 550px; 
-            padding: 2.5rem; 
-            border-radius: 1.5rem; 
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
-            text-align: center; 
+        .container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
         }
 
-        h2 { margin-bottom: 0.5rem; color: #1e293b; }
-        .sub-text { color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        .header h1 { font-size: 1.5rem; margin-bottom: 5px; color: var(--primary); }
+        .header p { font-size: 0.9rem; color: #64748b; margin-bottom: 25px; }
 
-        .error-msg { 
-            background: #fee2e2; 
-            color: #b91c1c; 
-            padding: 12px; 
-            border-radius: 8px; 
-            margin-bottom: 15px; 
-            display: none; 
-            font-size: 0.85rem; 
-            border: 1px solid #fecaca;
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            padding: 30px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 20px;
         }
 
-        .upload-box { 
-            border: 2px dashed #e2e8f0; 
-            padding: 2.5rem; 
-            border-radius: 1rem; 
-            margin-bottom: 1.5rem; 
-            cursor: pointer; 
-            transition: all 0.3s ease;
+        .upload-area:hover { border-color: var(--primary); background: #f1f5f9; }
+
+        .control-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; color: #475569; }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 1rem;
         }
 
-        .upload-box:hover { border-color: var(--primary); background: #f1f5f9; }
-
-        .settings { text-align: left; margin-bottom: 1.5rem; }
-        label { font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 8px; }
-
-        select, button { 
-            width: 100%; 
-            padding: 14px; 
-            border-radius: 12px; 
-            border: 1px solid #e2e8f0; 
-            font-size: 1rem; 
-            outline: none;
+        button {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
         }
 
-        button { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: background 0.2s;
+        button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        .progress-box {
+            margin-top: 25px;
+            display: none;
         }
 
-        button:hover { background: var(--primary-hover); }
-        button:disabled { background: #cbd5e1; cursor: not-allowed; }
-
-        .progress-section { margin-top: 1.5rem; display: none; }
-        .progress-bar { background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; }
-        #fill { background: var(--primary); width: 0%; height: 100%; transition: width 0.3s; }
-
-        .status-flex { 
-            display: flex; 
-            justify-content: space-between; 
-            margin-top: 8px; 
-            font-size: 0.9rem; 
-            font-weight: 600;
-        }
-
-        #output { 
-            margin-top: 2rem; 
-            display: none; 
-            border-top: 2px solid #f1f5f9; 
-            padding-top: 1.5rem; 
-        }
-
-        video { width: 100%; border-radius: 1rem; margin-bottom: 1.2rem; background: #000; }
-
-        .btn-download { 
-            background: var(--success); 
+        .bar-bg { background: #e2e8f0; height: 12px; border-radius: 10px; overflow: hidden; }
+        #barFill { background: var(--primary); width: 0%; height: 100%; transition: width 0.3s ease; }
+        
+        .status-info {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white; 
-            text-decoration: none; 
-            padding: 14px; 
-            border-radius: 12px; 
-            font-weight: bold; 
-            gap: 10px;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
         }
 
-        .version { font-size: 0.75rem; color: #94a3b8; margin-top: 2rem; display: block; }
+        #resultArea {
+            margin-top: 30px;
+            display: none;
+            padding-top: 20px;
+            border-top: 2px solid #f1f5f9;
+        }
+
+        video { width: 100%; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        .download-btn {
+            background: var(--secondary);
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .download-btn:hover { background: #059669; }
+
+        .footer-tag { font-size: 0.7rem; color: #94a3b8; margin-top: 25px; display: block; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Pemampat Video</h2>
-    <p class="sub-text">Kurangkan saiz video tanpa menjejaskan kualiti visual.</p>
-
-    <div id="sabAlert" class="error-msg">
-        Sistem sedang menyiapkan persekitaran selamat. Sila muat semula (Refresh) jika proses tidak bermula.
+<div class="container">
+    <div class="header">
+        <h1>Video Master</h1>
+        <p>Mampat & Tukar Format Video</p>
     </div>
 
-    <div class="upload-box" onclick="document.getElementById('videoInput').click()">
-        <span id="fileName">Klik atau Seret Video ke Sini</span>
-        <input type="file" id="videoInput" accept="video/*" hidden>
+    <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <span id="fileLabel">Pilih atau seret fail video</span>
+        <input type="file" id="fileInput" accept="video/*" hidden>
     </div>
 
-    <div class="settings">
-        <label>Format Output Pilihan</label>
-        <select id="formatOut">
-            <option value="mp4">MP4 (Paling Serasi)</option>
-            <option value="mkv">MKV (Kualiti Tinggi)</option>
-            <option value="webm">WebM (Untuk Web)</option>
-            <option value="mov">MOV (Apple QuickTime)</option>
+    <div class="control-group">
+        <label>Pilih Format Output</label>
+        <select id="outputFormat">
+            <option value="mp4">MP4 (Sesuai untuk semua)</option>
+            <option value="mkv">MKV (Kualiti Arkib)</option>
+            <option value="webm">WebM (Optimal untuk Web)</option>
+            <option value="mov">MOV (Format Apple)</option>
         </select>
     </div>
 
-    <button id="processBtn" disabled>Mula Mampatkan Video</button>
+    <button id="startBtn" disabled>Mula Proses Sekarang</button>
 
-    <div class="progress-section" id="progArea">
-        <div class="progress-bar"><div id="fill"></div></div>
-        <div class="status-flex">
-            <span id="statusTxt">Sedang diproses...</span>
+    <div class="progress-box" id="progressBox">
+        <div class="bar-bg">
+            <div id="barFill"></div>
+        </div>
+        <div class="status-info">
+            <span id="statusTxt">Menyediakan fail...</span>
             <span id="percTxt">0%</span>
         </div>
     </div>
 
-    <div id="output">
-        <video id="preview" controls></video>
-        <a id="downloadLink" class="btn-download">
-            <span>Muat Turun Video Hasil</span>
-        </a>
+    <div id="resultArea">
+        <video id="previewVid" controls></video>
+        <a id="downloadBtn" class="download-btn">Muat Turun Video Selesai</a>
+        <p style="font-size: 0.75rem; color: #ef4444; margin-top: 10px;">
+            Nota: Jika preview tidak muncul, video tetap boleh dimuat turun.
+        </p>
     </div>
 
-    <span class="version">v1.2.1 - Proses dilakukan secara lokal (Privasi Terjamin)</span>
+    <span class="footer-tag">Versi 1.3.0 • Berjalan sepenuhnya di pelayar anda</span>
 </div>
 
 <script>
-    // Semak ketersediaan SharedArrayBuffer
-    if (!window.SharedArrayBuffer) {
-        document.getElementById('sabAlert').style.display = 'block';
-    }
-
     const { createFFmpeg, fetchFile } = FFmpeg;
     const ffmpeg = createFFmpeg({ 
-        log: true, 
-        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' 
+        log: true,
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
     });
 
-    const videoInput = document.getElementById('videoInput');
-    const processBtn = document.getElementById('processBtn');
-    
-    videoInput.onchange = () => {
-        if(videoInput.files[0]) {
-            document.getElementById('fileName').innerText = videoInput.files[0].name;
-            processBtn.disabled = false;
+    const fileInput = document.getElementById('fileInput');
+    const startBtn = document.getElementById('startBtn');
+    const progressBox = document.getElementById('progressBox');
+    const barFill = document.getElementById('barFill');
+    const percTxt = document.getElementById('percTxt');
+    const statusTxt = document.getElementById('statusTxt');
+    const resultArea = document.getElementById('resultArea');
+    const previewVid = document.getElementById('previewVid');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    fileInput.onchange = () => {
+        if (fileInput.files[0]) {
+            document.getElementById('fileLabel').innerText = fileInput.files[0].name;
+            startBtn.disabled = false;
         }
     };
 
-    processBtn.onclick = async () => {
-        const file = videoInput.files[0];
-        const ext = document.getElementById('formatOut').value;
-        
-        processBtn.disabled = true;
-        document.getElementById('progArea').style.display = 'block';
-        document.getElementById('output').style.display = 'none';
+    startBtn.onclick = async () => {
+        const file = fileInput.files[0];
+        const format = document.getElementById('outputFormat').value;
+        const outName = `video_siap.${format}`;
+
+        // UI Reset
+        startBtn.disabled = true;
+        progressBox.style.display = 'block';
+        resultArea.style.display = 'none';
+        barFill.style.width = '0%';
+        percTxt.innerText = '0%';
 
         try {
             if (!ffmpeg.isLoaded()) {
-                document.getElementById('statusTxt').innerText = "Memuatkan enjin...";
+                statusTxt.innerText = "Memuatkan Enjin FFmpeg...";
                 await ffmpeg.load();
             }
 
-            ffmpeg.FS('writeFile', 'input_video', await fetchFile(file));
+            statusTxt.innerText = "Membaca fail video...";
+            ffmpeg.FS('writeFile', 'input', await fetchFile(file));
 
+            // Progress Tracking
             ffmpeg.setProgress(({ ratio }) => {
-                const percentage = Math.round(ratio * 100);
-                document.getElementById('fill').style.width = percentage + '%';
-                document.getElementById('percTxt').innerText = percentage + '%';
-                document.getElementById('statusTxt').innerText = "Sedang mampat...";
+                const p = Math.round(ratio * 100);
+                barFill.style.width = p + '%';
+                percTxt.innerText = p + '%';
+                statusTxt.innerText = "Sedang memproses...";
             });
 
-            // Perintah FFmpeg:
-            // -crf 23: Keseimbangan terbaik saiz vs kualiti (18-28).
-            // -preset faster: Kelajuan pemprosesan.
+            /* 
+               LOGIK PEMPROSESAN v1.3.0:
+               -vcodec libx264: Codec paling stabil.
+               -crf 25: Saiz fail kecil, kualiti masih tajam.
+               -preset ultrafast: Supaya proses dalam browser tidak terlalu lama.
+               -c:a aac: Audio universal.
+            */
             await ffmpeg.run(
-                '-i', 'input_video', 
-                '-vcodec', 'libx264', 
-                '-crf', '23', 
-                '-preset', 'faster', 
+                '-i', 'input',
+                '-c:v', 'libx264',
+                '-crf', '25',
+                '-preset', 'ultrafast',
                 '-c:a', 'aac',
-                `result.${ext}`
+                '-movflags', '+faststart', 
+                outName
             );
 
-            const data = ffmpeg.FS('readFile', `result.${ext}`);
-            const url = URL.createObjectURL(new Blob([data.buffer], { type: `video/${ext}` }));
+            // Ambil data hasil
+            const data = ffmpeg.FS('readFile', outName);
+            const blob = new Blob([data.buffer], { type: `video/${format}` });
+            const url = URL.createObjectURL(blob);
 
-            document.getElementById('preview').src = url;
-            document.getElementById('downloadLink').href = url;
-            document.getElementById('downloadLink').download = `Video_Mampat_${Date.now()}.${ext}`;
+            // Paparkan hasil
+            previewVid.src = url;
+            downloadBtn.href = url;
+            downloadBtn.download = `MasterVideo_${Date.now()}.${format}`;
             
-            document.getElementById('output').style.display = 'block';
-            document.getElementById('progArea').style.display = 'none';
+            statusTxt.innerText = "Proses Selesai!";
+            resultArea.style.display = 'block';
             
-            // Padam fail dari memori maya
-            ffmpeg.FS('unlink', 'input_video');
-            ffmpeg.FS('unlink', `result.${ext}`);
+            // Bersihkan memori maya
+            ffmpeg.FS('unlink', 'input');
+            ffmpeg.FS('unlink', outName);
 
-        } catch (error) {
-            alert("Ralat berlaku: " + error.message);
-            console.error(error);
+        } catch (err) {
+            console.error(err);
+            alert("Ralat dikesan: " + err.message);
+            statusTxt.innerText = "Gagal diproses.";
         } finally {
-            processBtn.disabled = false;
+            startBtn.disabled = false;
         }
     };
 </script>
+
 </body>
 </html>
