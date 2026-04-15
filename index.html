@@ -3,276 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Compressor Pro v1.1.0</title>
-    <!-- COI Service Worker untuk memperbaiki masalah SharedArrayBuffer di GitHub Pages -->
+    <title>Video Compressor & Converter Pro v1.2.0</title>
+    <!-- WAJIB: Script ini harus ada untuk memperbaiki error di GitHub Pages -->
     <script src="coi-serviceworker.js"></script>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
         :root {
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --success: #10b981;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text: #1e293b;
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --success: #059669;
+            --error: #dc2626;
+            --bg: #f8fafc;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg); display: flex; justify-content: center; padding: 20px; }
 
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            background: var(--card);
+        .app-card {
+            background: white;
             width: 100%;
-            max-width: 500px;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
             text-align: center;
         }
 
-        .version {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin-top: 10px;
-            display: block;
+        .upload-section {
+            border: 2px dashed #e2e8f0;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: 0.3s;
         }
 
-        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #0f172a; }
-        p { font-size: 0.9rem; color: #64748b; margin-bottom: 1.5rem; }
+        .upload-section:hover { border-color: var(--primary); background: #f1f5f9; }
 
-        .upload-area {
-            border: 2px dashed #cbd5e1;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            transition: border 0.3s;
-        }
-
-        .upload-area:hover { border-color: var(--primary); }
-
-        input[type="file"] { width: 100%; font-size: 0.9rem; }
-
-        .settings {
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
             text-align: left;
             margin-bottom: 20px;
-            display: none;
         }
 
-        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; }
-
-        select {
+        select, button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid #cbd5e1;
-            background: white;
-            outline: none;
+            font-size: 1rem;
         }
 
         button {
-            width: 100%;
-            background-color: var(--primary);
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
+            transition: 0.2s;
         }
 
-        button:hover:not(:disabled) { background-color: var(--primary-hover); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
 
-        .progress-box {
-            margin-top: 20px;
+        .progress-container {
+            margin: 20px 0;
             display: none;
         }
 
-        .progress-bar-bg {
+        .progress-bar {
             background: #e2e8f0;
             height: 12px;
             border-radius: 10px;
             overflow: hidden;
-            margin-bottom: 8px;
+            position: relative;
         }
 
-        #progressBar {
+        #progressFill {
             background: var(--primary);
             width: 0%;
             height: 100%;
-            transition: width 0.3s ease;
+            transition: width 0.3s;
         }
 
-        .perc-text { font-weight: bold; color: var(--primary); font-size: 1.1rem; }
+        #percText {
+            display: block;
+            margin-top: 8px;
+            font-weight: bold;
+            color: var(--primary);
+        }
 
         #outputArea {
             margin-top: 25px;
             display: none;
-            border-top: 1px solid #e2e8f0;
+            border-top: 2px solid #f1f5f9;
             padding-top: 20px;
         }
 
-        video {
-            width: 100%;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            background: #000;
-        }
+        video { width: 100%; border-radius: 12px; background: #000; margin-bottom: 15px; }
 
         .download-btn {
-            background-color: var(--success);
+            background: var(--success);
             text-decoration: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: block;
             color: white;
-            font-weight: 600;
             padding: 12px;
             border-radius: 8px;
+            font-weight: bold;
         }
 
-        @media (max-width: 480px) {
-            .container { padding: 1.5rem; }
-            h1 { font-size: 1.25rem; }
-        }
+        .version-tag { font-size: 0.7rem; color: #94a3b8; margin-top: 20px; display: block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Video Compressor</h1>
-    <p>Kompres & Konversi Video Tanpa Kehilangan Kualitas</p>
+<div class="app-card">
+    <h2>Video Compressor</h2>
+    <p style="color: #64748b;">v1.2.0 - Konversi Tanpa Kurangi Kualitas</p>
 
-    <div class="upload-area">
-        <input type="file" id="fileInput" accept="video/*">
+    <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+        <p id="fileName">Klik untuk pilih video (MP4, MKV, AVI, dll)</p>
+        <input type="file" id="fileInput" accept="video/*" hidden>
     </div>
 
-    <div id="settings" class="settings">
-        <label for="formatSelect">Format Output:</label>
-        <select id="formatSelect">
-            <option value="mp4">MP4 (Paling Populer)</option>
-            <option value="mkv">MKV (Kualitas Tinggi)</option>
-            <option value="mov">MOV (Apple)</option>
-            <option value="webm">WebM (Optimal Web)</option>
-            <option value="avi">AVI (Lama)</option>
-        </select>
-    </div>
-
-    <button id="startBtn" disabled>
-        <span>Mulai Proses</span>
-    </button>
-
-    <div id="progressBox" class="progress-box">
-        <div class="progress-bar-bg">
-            <div id="progressBar"></div>
+    <div class="settings-grid">
+        <div>
+            <label style="font-size: 0.8rem; font-weight: bold;">Format Output</label>
+            <select id="formatSelect">
+                <option value="mp4">MP4 (Default)</option>
+                <option value="mkv">MKV</option>
+                <option value="webm">WebM</option>
+                <option value="mov">MOV</option>
+            </select>
         </div>
-        <div id="status">Memproses: <span class="perc-text" id="percNum">0%</span></div>
+        <div>
+            <label style="font-size: 0.8rem; font-weight: bold;">Preset</label>
+            <select id="presetSelect">
+                <option value="fast">Cepat (Ukuran Sedang)</option>
+                <option value="medium">Standar (Kualitas Bagus)</option>
+                <option value="slow">Lambat (Paling Kecil)</option>
+            </select>
+        </div>
+    </div>
+
+    <button id="startBtn" disabled>Mulai Konversi & Kompres</button>
+
+    <div class="progress-container" id="progContainer">
+        <div class="progress-bar">
+            <div id="progressFill"></div>
+        </div>
+        <span id="percText">0%</span>
+        <small id="statusMsg" style="color: #64748b;">Menyiapkan FFmpeg...</small>
     </div>
 
     <div id="outputArea">
         <video id="preview" controls></video>
-        <a id="downloadLink" class="download-btn">
-            Download Video Hasil
-        </a>
+        <a id="downloadLink" class="download-btn">Download Hasil Konversi</a>
     </div>
 
-    <span class="version">v1.1.0 - Powered by FFmpeg.wasm</span>
+    <span class="version-tag">Dijalankan secara lokal di browser Anda. Privasi Terjamin.</span>
 </div>
 
 <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
     const ffmpeg = createFFmpeg({ 
-        log: false, // Set true untuk debugging
+        log: true,
         corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
     });
 
     const fileInput = document.getElementById('fileInput');
     const startBtn = document.getElementById('startBtn');
-    const settings = document.getElementById('settings');
-    const progressBox = document.getElementById('progressBox');
-    const progressBar = document.getElementById('progressBar');
-    const percNum = document.getElementById('percNum');
+    const progContainer = document.getElementById('progContainer');
+    const progressFill = document.getElementById('progressFill');
+    const percText = document.getElementById('percText');
+    const statusMsg = document.getElementById('statusMsg');
     const outputArea = document.getElementById('outputArea');
     const preview = document.getElementById('preview');
     const downloadLink = document.getElementById('downloadLink');
-    const formatSelect = document.getElementById('formatSelect');
 
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
+    fileInput.onchange = () => {
+        if (fileInput.files[0]) {
+            document.getElementById('fileName').innerText = fileInput.files[0].name;
             startBtn.disabled = false;
-            settings.style.display = 'block';
         }
-    });
+    };
 
-    startBtn.addEventListener('click', async () => {
+    startBtn.onclick = async () => {
         const file = fileInput.files[0];
-        const outExt = formatSelect.value;
-        const outName = `output.${outExt}`;
+        const format = document.getElementById('formatSelect').value;
+        const preset = document.getElementById('presetSelect').value;
+        const inputName = 'input_file';
+        const outputName = `output.${format}`;
 
-        // UI Reset
+        // UI Update
         startBtn.disabled = true;
+        progContainer.style.display = 'block';
         outputArea.style.display = 'none';
-        progressBox.style.display = 'block';
-        
-        if (!ffmpeg.isLoaded()) {
-            percNum.innerText = "Loading Engine...";
-            await ffmpeg.load();
+
+        try {
+            if (!ffmpeg.isLoaded()) {
+                statusMsg.innerText = "Memuat engine (hanya sekali)...";
+                await ffmpeg.load();
+            }
+
+            statusMsg.innerText = "Membaca file video...";
+            ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+            // Setup Progress
+            ffmpeg.setProgress(({ ratio }) => {
+                const p = Math.round(ratio * 100);
+                progressFill.style.width = p + '%';
+                percText.innerText = p + '%';
+                statusMsg.innerText = "Sedang mengolah video...";
+            });
+
+            // LOGIC COMMAND FFmpeg
+            // -crf 23 (Standar kualitas visual tanpa cacat)
+            // -c:a aac (Audio encoder agar support semua format)
+            let args = ['-i', inputName, '-c:v', 'libx264', '-crf', '23', '-preset', preset, '-c:a', 'aac', outputName];
+            
+            if (format === 'webm') {
+                args = ['-i', inputName, '-c:v', 'libvpx', '-crf', '25', '-b:v', '1M', '-c:a', 'libvorbis', outputName];
+            }
+
+            await ffmpeg.run(...args);
+
+            // Baca Hasil
+            const data = ffmpeg.FS('readFile', outputName);
+            const url = URL.createObjectURL(new Blob([data.buffer], { type: `video/${format}` }));
+
+            // Tampilkan Hasil
+            preview.src = url;
+            downloadLink.href = url;
+            downloadLink.download = `Hasil_Kompresi_${Date.now()}.${format}`;
+            
+            outputArea.style.display = 'block';
+            progContainer.style.display = 'none';
+            statusMsg.innerText = "Selesai!";
+            
+            // Bersihkan memori agar tidak crash
+            ffmpeg.FS('unlink', inputName);
+            ffmpeg.FS('unlink', outputName);
+
+        } catch (e) {
+            console.error(e);
+            alert("Terjadi kesalahan saat memproses video: " + e.message);
+            statusMsg.innerText = "Gagal memproses.";
+        } finally {
+            startBtn.disabled = false;
         }
-
-        // Progress Handler
-        ffmpeg.setProgress(({ ratio }) => {
-            const percentage = Math.round(ratio * 100);
-            progressBar.style.width = percentage + '%';
-            percNum.innerText = percentage + '%';
-        });
-
-        // Write file to Virtual FS
-        ffmpeg.FS('writeFile', 'input', await fetchFile(file));
-
-        /* 
-           COMMAND EXPLANATION:
-           -crf 23: Balance between size & quality (Lower is better quality, 18-28 is sweet spot)
-           -preset faster: Speed of compression
-           -vcodec libx264: Industry standard video codec
-        */
-        await ffmpeg.run(
-            '-i', 'input',
-            '-vcodec', 'libx264',
-            '-crf', '23',
-            '-preset', 'faster',
-            outName
-        );
-
-        // Read Result
-        const data = ffmpeg.FS('readFile', outName);
-        const url = URL.createObjectURL(new Blob([data.buffer], { type: `video/${outExt}` }));
-
-        // Show Result
-        progressBox.style.display = 'none';
-        outputArea.style.display = 'block';
-        preview.src = url;
-        downloadLink.href = url;
-        downloadLink.download = `compressed_video.${outExt}`;
-        
-        startBtn.disabled = false;
-    });
+    };
 </script>
 
 </body>
