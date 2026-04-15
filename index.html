@@ -1,80 +1,179 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Compressor Pro v1.2.1</title>
+    <title>Pemampat Video Pro v1.2.1</title>
     
-    <!-- LOAD SERVICE WORKER PERTAMA KALI -->
+    <!-- MEMUATKAN SERVICE WORKER UNTUK SHAREDARRAYBUFFER -->
     <script src="coi-serviceworker.js"></script>
     
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
-        :root { --p: #6366f1; --p-h: #4f46e5; --bg: #f8fafc; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; width: 100%; max-width: 500px; padding: 2rem; border-radius: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: center; }
-        .alert { background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; font-size: 0.85rem; }
-        .drop-zone { border: 2px dashed #e2e8f0; padding: 2rem; border-radius: 1rem; margin-bottom: 1.5rem; cursor: pointer; }
-        .drop-zone:hover { border-color: var(--p); background: #f1f5f9; }
-        select, button { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 5px; font-size: 1rem; }
-        button { background: var(--p); color: white; border: none; font-weight: 600; cursor: pointer; margin-top: 1.5rem; }
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca; 
+            --bg: #f8fafc; 
+            --success: #10b981;
+        }
+        
+        * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        
+        body { 
+            background-color: var(--bg); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px; 
+            margin: 0;
+        }
+
+        .card { 
+            background: white; 
+            width: 100%; 
+            max-width: 550px; 
+            padding: 2.5rem; 
+            border-radius: 1.5rem; 
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
+            text-align: center; 
+        }
+
+        h2 { margin-bottom: 0.5rem; color: #1e293b; }
+        .sub-text { color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+        .error-msg { 
+            background: #fee2e2; 
+            color: #b91c1c; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            display: none; 
+            font-size: 0.85rem; 
+            border: 1px solid #fecaca;
+        }
+
+        .upload-box { 
+            border: 2px dashed #e2e8f0; 
+            padding: 2.5rem; 
+            border-radius: 1rem; 
+            margin-bottom: 1.5rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+        }
+
+        .upload-box:hover { border-color: var(--primary); background: #f1f5f9; }
+
+        .settings { text-align: left; margin-bottom: 1.5rem; }
+        label { font-size: 0.85rem; font-weight: 700; color: #475569; display: block; margin-bottom: 8px; }
+
+        select, button { 
+            width: 100%; 
+            padding: 14px; 
+            border-radius: 12px; 
+            border: 1px solid #e2e8f0; 
+            font-size: 1rem; 
+            outline: none;
+        }
+
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+
+        button:hover { background: var(--primary-hover); }
         button:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .prog-container { margin-top: 1.5rem; display: none; }
-        .bar { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; }
-        #fill { background: var(--p); width: 0%; height: 100%; transition: 0.3s; }
-        #output { margin-top: 2rem; display: none; border-top: 2px solid #f1f5f9; padding-top: 1.5rem; }
-        video { width: 100%; border-radius: 1rem; margin-bottom: 1rem; }
-        .dl-btn { background: #10b981; display: block; color: white; text-decoration: none; padding: 12px; border-radius: 10px; font-weight: bold; }
-        .v { font-size: 0.7rem; color: #94a3b8; margin-top: 1.5rem; display: block; }
+
+        .progress-section { margin-top: 1.5rem; display: none; }
+        .progress-bar { background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; }
+        #fill { background: var(--primary); width: 0%; height: 100%; transition: width 0.3s; }
+
+        .status-flex { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 8px; 
+            font-size: 0.9rem; 
+            font-weight: 600;
+        }
+
+        #output { 
+            margin-top: 2rem; 
+            display: none; 
+            border-top: 2px solid #f1f5f9; 
+            padding-top: 1.5rem; 
+        }
+
+        video { width: 100%; border-radius: 1rem; margin-bottom: 1.2rem; background: #000; }
+
+        .btn-download { 
+            background: var(--success); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white; 
+            text-decoration: none; 
+            padding: 14px; 
+            border-radius: 12px; 
+            font-weight: bold; 
+            gap: 10px;
+        }
+
+        .version { font-size: 0.75rem; color: #94a3b8; margin-top: 2rem; display: block; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Video Compressor</h2>
-    <p style="color: #64748b; margin-bottom: 1rem;">v1.2.1 - Fix SharedArrayBuffer</p>
+    <h2>Pemampat Video</h2>
+    <p class="sub-text">Kurangkan saiz video tanpa menjejaskan kualiti visual.</p>
 
-    <!-- Pesan Error jika SharedArrayBuffer mati -->
-    <div id="sabError" class="alert">
-        Browser memblokir fitur kompresi. Sedang mencoba memperbaiki... Jika pesan ini tidak hilang, silakan Refresh (F5).
+    <div id="sabAlert" class="error-msg">
+        Sistem sedang menyiapkan persekitaran selamat. Sila muat semula (Refresh) jika proses tidak bermula.
     </div>
 
-    <div class="drop-zone" onclick="document.getElementById('f').click()">
-        <span id="fN">Pilih atau Drag Video ke Sini</span>
-        <input type="file" id="f" accept="video/*" hidden>
+    <div class="upload-box" onclick="document.getElementById('videoInput').click()">
+        <span id="fileName">Klik atau Seret Video ke Sini</span>
+        <input type="file" id="videoInput" accept="video/*" hidden>
     </div>
 
-    <div style="text-align: left;">
-        <label style="font-size: 0.8rem; font-weight: bold;">Format Tujuan</label>
-        <select id="fmt">
-            <option value="mp4">MP4 (Sangat Disarankan)</option>
-            <option value="mkv">MKV</option>
-            <option value="webm">WebM</option>
+    <div class="settings">
+        <label>Format Output Pilihan</label>
+        <select id="formatOut">
+            <option value="mp4">MP4 (Paling Serasi)</option>
+            <option value="mkv">MKV (Kualiti Tinggi)</option>
+            <option value="webm">WebM (Untuk Web)</option>
+            <option value="mov">MOV (Apple QuickTime)</option>
         </select>
     </div>
 
-    <button id="btn" disabled>Kompres Sekarang</button>
+    <button id="processBtn" disabled>Mula Mampatkan Video</button>
 
-    <div class="prog-container" id="pC">
-        <div class="bar"><div id="fill"></div></div>
-        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.9rem;">
-            <span id="stat">Memproses...</span>
-            <span id="perc">0%</span>
+    <div class="progress-section" id="progArea">
+        <div class="progress-bar"><div id="fill"></div></div>
+        <div class="status-flex">
+            <span id="statusTxt">Sedang diproses...</span>
+            <span id="percTxt">0%</span>
         </div>
     </div>
 
     <div id="output">
-        <video id="pre" controls></video>
-        <a id="dl" class="dl-btn">Download Video</a>
+        <video id="preview" controls></video>
+        <a id="downloadLink" class="btn-download">
+            <span>Muat Turun Video Hasil</span>
+        </a>
     </div>
 
-    <span class="v">Proses dilakukan 100% di perangkat Anda.</span>
+    <span class="version">v1.2.1 - Proses dilakukan secara lokal (Privasi Terjamin)</span>
 </div>
 
 <script>
-    // Cek apakah SharedArrayBuffer tersedia
+    // Semak ketersediaan SharedArrayBuffer
     if (!window.SharedArrayBuffer) {
-        document.getElementById('sabError').style.display = 'block';
+        document.getElementById('sabAlert').style.display = 'block';
     }
 
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -83,52 +182,70 @@
         corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' 
     });
 
-    const fileIn = document.getElementById('f');
-    const btn = document.getElementById('btn');
+    const videoInput = document.getElementById('videoInput');
+    const processBtn = document.getElementById('processBtn');
     
-    fileIn.onchange = () => {
-        if(fileIn.files[0]) {
-            document.getElementById('fN').innerText = fileIn.files[0].name;
-            btn.disabled = false;
+    videoInput.onchange = () => {
+        if(videoInput.files[0]) {
+            document.getElementById('fileName').innerText = videoInput.files[0].name;
+            processBtn.disabled = false;
         }
     };
 
-    btn.onclick = async () => {
-        const file = fileIn.files[0];
-        const ext = document.getElementById('fmt').value;
-        btn.disabled = true;
-        document.getElementById('pC').style.display = 'block';
+    processBtn.onclick = async () => {
+        const file = videoInput.files[0];
+        const ext = document.getElementById('formatOut').value;
+        
+        processBtn.disabled = true;
+        document.getElementById('progArea').style.display = 'block';
         document.getElementById('output').style.display = 'none';
 
         try {
-            if (!ffmpeg.isLoaded()) await ffmpeg.load();
+            if (!ffmpeg.isLoaded()) {
+                document.getElementById('statusTxt').innerText = "Memuatkan enjin...";
+                await ffmpeg.load();
+            }
 
-            ffmpeg.FS('writeFile', 'in', await fetchFile(file));
+            ffmpeg.FS('writeFile', 'input_video', await fetchFile(file));
 
             ffmpeg.setProgress(({ ratio }) => {
-                const p = Math.round(ratio * 100);
-                document.getElementById('fill').style.width = p + '%';
-                document.getElementById('perc').innerText = p + '%';
+                const percentage = Math.round(ratio * 100);
+                document.getElementById('fill').style.width = percentage + '%';
+                document.getElementById('percTxt').innerText = percentage + '%';
+                document.getElementById('statusTxt').innerText = "Sedang mampat...";
             });
 
-            // Jalankan FFmpeg
-            // -crf 23 (Kualitas visual tetap terjaga, ukuran turun drastis)
-            await ffmpeg.run('-i', 'in', '-c:v', 'libx264', '-crf', '23', '-preset', 'faster', '-c:a', 'aac', `out.${ext}`);
+            // Perintah FFmpeg:
+            // -crf 23: Keseimbangan terbaik saiz vs kualiti (18-28).
+            // -preset faster: Kelajuan pemprosesan.
+            await ffmpeg.run(
+                '-i', 'input_video', 
+                '-vcodec', 'libx264', 
+                '-crf', '23', 
+                '-preset', 'faster', 
+                '-c:a', 'aac',
+                `result.${ext}`
+            );
 
-            const data = ffmpeg.FS('readFile', `out.${ext}`);
+            const data = ffmpeg.FS('readFile', `result.${ext}`);
             const url = URL.createObjectURL(new Blob([data.buffer], { type: `video/${ext}` }));
 
-            document.getElementById('pre').src = url;
-            document.getElementById('dl').href = url;
-            document.getElementById('dl').download = `compressed_${Date.now()}.${ext}`;
+            document.getElementById('preview').src = url;
+            document.getElementById('downloadLink').href = url;
+            document.getElementById('downloadLink').download = `Video_Mampat_${Date.now()}.${ext}`;
+            
             document.getElementById('output').style.display = 'block';
-            document.getElementById('pC').style.display = 'none';
+            document.getElementById('progArea').style.display = 'none';
+            
+            // Padam fail dari memori maya
+            ffmpeg.FS('unlink', 'input_video');
+            ffmpeg.FS('unlink', `result.${ext}`);
 
-        } catch (e) {
-            alert("Gagal: " + e.message);
-            console.error(e);
+        } catch (error) {
+            alert("Ralat berlaku: " + error.message);
+            console.error(error);
         } finally {
-            btn.disabled = false;
+            processBtn.disabled = false;
         }
     };
 </script>
