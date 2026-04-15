@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+   <script src="coi-serviceworker.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Compressor Pro - Tanpa Kurangi Kualitas</title>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { color: #1e293b; margin-bottom: 0.5rem; }
+        p { color: #64748b; margin-bottom: 2rem; }
+        #fileInput { margin-bottom: 20px; }
+        .controls { margin-top: 20px; display: none; }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { margin-top: 20px; font-weight: bold; color: var(--primary); }
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+        #progressBar {
+            width: 0%;
+            height: 10px;
+            background-color: var(--primary);
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        video { width: 100%; margin-top: 20px; border-radius: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Video Compressor</h1>
+    <p>Kompres semua format video langsung di browser Anda.</p>
+    
+    <input type="file" id="fileInput" accept="video/*">
+    
+    <div id="controls" class="controls">
+        <button id="compressBtn">Mulai Kompresi</button>
+    </div>
+
+    <div class="progress-container" id="progContainer">
+        <div id="progressBar"></div>
+    </div>
+    <p id="status"></p>
+
+    <video id="outputVideo" controls></video>
+    <br>
+    <a id="downloadBtn" style="display: none;">
+        <button style="background-color: #10b981;">Download Video Terkompresi</button>
+    </a>
+</div>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ 
+        log: true,
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+    });
+
+    const fileInput = document.getElementById('fileInput');
+    const compressBtn = document.getElementById('compressBtn');
+    const status = document.getElementById('status');
+    const progContainer = document.getElementById('progContainer');
+    const progressBar = document.getElementById('progressBar');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const outputVideo = document.getElementById('outputVideo');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) {
+            document.getElementById('controls').style.display = 'block';
+            status.innerText = "Video siap diproses.";
+        }
+    });
+
+    compressBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        compressBtn.disabled = true;
+        status.innerText = "Memuat core engine (FFmpeg)...";
+        
+        if (!ffmpeg.isLoaded()) {
+            await ffmpeg.load();
+        }
+
+        status.innerText = "Sedang mengompres... Mohon tunggu (ini butuh waktu)";
+        progContainer.style.display = 'block';
+
+        // Listen to progress
+        ffmpeg.setProgress(({ ratio }) => {
+            progressBar.style.width = `${(ratio * 100).toFixed(0)}%`;
+        });
+
+        // Write file to memory
+        ffmpeg.FS('writeFile', 'input_video', await fetchFile(file));
+
+        /* 
+           PERINTAH KOMPRESI:
+           -crf 23: Keseimbangan terbaik antara kualitas & ukuran (18-28 adalah range ideal).
+           -preset faster: Kecepatan proses.
+        */
+        await ffmpeg.run(
+            '-i', 'input_video', 
+            '-vcodec', 'libx264', 
+            '-crf', '23', 
+            '-preset', 'faster', 
+            'output.mp4'
+        );
+
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+
+        // Create download link
+        const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+        
+        status.innerText = "Selesai! Video berhasil dikompres.";
+        outputVideo.src = url;
+        outputVideo.style.display = 'block';
+        downloadBtn.href = url;
+        downloadBtn.download = 'compressed_video.mp4';
+        downloadBtn.style.display = 'inline-block';
+        compressBtn.disabled = false;
+    });
+</script>
+
+</body>
+</html>
